@@ -6,7 +6,7 @@ on:
       - 'android/**'
       - '.github/workflows/android.yml'
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -29,3 +29,15 @@ jobs:
           name: AutoRadio-Connect-V2-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+      - name: Publish Android APK
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk AutoRadio-Connect.apk
+          tag="android-build-${GITHUB_RUN_ID}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" AutoRadio-Connect.apk --clobber
+          else
+            gh release create "$tag" AutoRadio-Connect.apk --target "$GITHUB_SHA" --title "AutoRadio Connect V2 Alpha - build ${GITHUB_RUN_NUMBER}" --notes "APK de diagnóstico Android. Versão de testes, sem comandos de reset ou firmware." --latest
+          fi
