@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b1019">
+<title>AutoRadio Connect • Alpha 0.1</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#0b1019;color:#e6edf7}
+*{box-sizing:border-box}body{margin:0}main{max-width:850px;margin:auto;padding:24px 16px 60px}
+header{padding:20px 0}h1{margin:4px 0;font-size:clamp(2rem,7vw,3rem)}h2{font-size:1.15rem;margin:0 0 14px}
+.kicker{color:#5ac9f9;font-weight:700;letter-spacing:.13em;font-size:.75rem}p,small{color:#a5b4ca;line-height:1.5}
+section{background:#131e2d;border:1px solid #29394c;border-radius:16px;padding:22px;margin:14px 0}
+button,input{font:inherit;border-radius:10px;padding:12px;border:1px solid #3b4c64;background:#1c314a;color:white;max-width:100%}
+input{width:100%;margin:8px 0 12px}button{cursor:pointer;text-align:left}
+button.primary{background:#087cab;border-color:#139bcf;font-weight:700}button:disabled{opacity:.45;cursor:not-allowed}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.grid button{width:100%}a{color:#6bd0ff}pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#aee8ff;background:#091522;padding:12px;border-radius:10px;font-size:.82rem;max-height:360px;overflow:auto}
+.pill{display:inline-block;padding:6px 12px;background:#24384a;border-radius:30px;color:#aee8ff}
+@media(max-width:440px){.grid{grid-template-columns:1fr}section{padding:16px}}
+</style>
+</head>
+<body>
+<main>
+<header><div class="kicker">LABORATÓRIO AUTOMOTIVO · ALPHA 0.1</div><h1>AutoRadio Connect</h1><p>Identificação e diagnóstico inicial de rádios automotivos, sem enviar comandos perigosos.</p></header>
+<section>
+<h2>Conexão com dispositivo</h2><p id="status" role="status">Nenhum dispositivo identificado.</p>
+<div class="grid"><button class="primary" id="usb">🔌 Conectar por USB</button><button id="bt">ᛒ Buscar Bluetooth LE</button></div>
+<p id="env"></p><small>A conexão só funciona se o rádio expuser informações compatíveis e o navegador permitir. USB de pen drive e Bluetooth clássico não garantem diagnóstico via web.</small>
+</section>
+<section>
+<h2>Identificação e firmware</h2>
+<label for="model">Modelo comercial do rádio</label><input id="model" placeholder="Ex.: MVH-S218BT" autocomplete="off">
+<button id="search">Pesquisar atualização oficial</button>
+<p>Confira o modelo e a região antes de procurar firmware. Dados USB (fabricante, produto, VID/PID) podem não revelar o modelo real.</p>
+<a href="https://pioneer.com.br/" target="_blank" rel="noopener noreferrer">Portal Pioneer Brasil</a>
+</section>
+<section>
+<h2>Manutenção avançada <span class="pill">Em estudo</span></h2>
+<div class="grid"><button disabled>Reset de fábrica</button><button disabled>Instalar firmware</button><button disabled>Busca de estações</button><button disabled>Pareamento Bluetooth</button><button disabled>Equalizador</button><button disabled>Backup de configurações</button></div>
+<p>Nenhuma dessas operações é executada nesta versão. Precisamos identificar o rádio e validar os procedimentos oficiais antes de ativá-las.</p>
+</section>
+<section>
+<h2>Relatório de descoberta</h2><pre id="log">Aguardando teste.</pre>
+<button id="save">Baixar relatório JSON</button><p><small>O relatório fica no dispositivo até você decidir exportá-lo. Revise o conteúdo antes de compartilhar.</small></p>
+</section>
+</main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const report={version:'0.1.0',events:[]};
+const err=e=>e instanceof Error?e.message:String(e);
+function log(type,data){report.events.push({time:new Date().toISOString(),type,data});$('log').textContent=JSON.stringify(report,null,2)}
+$('env').textContent=`HTTPS/seguro: ${isSecureContext?'sim':'não'} · WebUSB: ${navigator.usb?'sim':'não'} · Web Bluetooth: ${navigator.bluetooth?'sim':'não'}`;
+log('environment',{secure:isSecureContext,usb:!!navigator.usb,bluetooth:!!navigator.bluetooth,userAgent:navigator.userAgent});
+$('usb').addEventListener('click',async()=>{
+ try{
+  if(!navigator.usb)throw new Error('WebUSB não está disponível neste navegador. Tente Chrome no Android em HTTPS.');
+  const d=await navigator.usb.requestDevice({filters:[]});
+  const data={manufacturer:d.manufacturerName||null,product:d.productName||null,vendorId:d.vendorId,productId:d.productId,deviceVersion:[d.deviceVersionMajor,d.deviceVersionMinor,d.deviceVersionSubminor].join('.'),configurations:(d.configurations||[]).map(c=>({value:c.configurationValue,interfaces:c.interfaces.map(i=>({number:i.interfaceNumber,alternates:i.alternates.map(a=>({class:a.interfaceClass,subclass:a.interfaceSubclass,protocol:a.interfaceProtocol}))}))}))};
+  log('usb_selected',data);
+  $('status').textContent='Dispositivo selecionado: '+(data.product||'nome não informado');
+  if(data.product&&!$('model').value)$('model').value=data.product;
+ }catch(e){log('usb_error',err(e));$('status').textContent=err(e)}
+});
+$('bt').addEventListener('click',async()=>{
+ try{
+  if(!navigator.bluetooth)throw new Error('Web Bluetooth indisponível. Bluetooth clássico não é compatível com esta API.');
+  const d=await navigator.bluetooth.requestDevice({acceptAllDevices:true});
+  log('ble_selected',{name:d.name||null,id:d.id||null});
+  $('status').textContent='Dispositivo BLE selecionado: '+(d.name||'sem nome');
+  if(d.name&&!$('model').value)$('model').value=d.name;
+ }catch(e){log('ble_error',err(e));$('status').textContent=err(e)}
+});
+$('search').addEventListener('click',()=>{
+ const m=$('model').value.trim();
+ if(!m){alert('Informe ou identifique o modelo primeiro.');return}
+ window.open('https://www.google.com/search?q='+encodeURIComponent('site:pioneer.com.br '+m+' firmware atualização'),'_blank','noopener,noreferrer');
+});
+$('save').addEventListener('click',()=>{
+ const blob=new Blob([JSON.stringify({...report,model:$('model').value.trim()},null,2)],{type:'application/json'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='autoradio-diagnostico.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+</script>
+</body>
+</html>
