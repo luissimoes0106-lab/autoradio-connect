@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0b1019">
-<title>AutoRadio Connect • Alpha 0.1</title>
+<title>AutoRadio Connect • V1.0</title>
 <style>
 :root{color-scheme:dark;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#0b1019;color:#e6edf7}
 *{box-sizing:border-box}body{margin:0}main{max-width:850px;margin:auto;padding:24px 16px 60px}
@@ -22,10 +22,10 @@ button.primary{background:#087cab;border-color:#139bcf;font-weight:700}button:di
 </head>
 <body>
 <main>
-<header><div class="kicker">LABORATÓRIO AUTOMOTIVO · ALPHA 0.1</div><h1>AutoRadio Connect</h1><p>Identificação e diagnóstico inicial de rádios automotivos, sem enviar comandos perigosos.</p></header>
+<header><div class="kicker">LABORATÓRIO AUTOMOTIVO · V1.0</div><h1>AutoRadio Connect</h1><p>Identificação e diagnóstico inicial de rádios automotivos, sem enviar comandos perigosos.</p></header>
 <section>
 <h2>Conexão com dispositivo</h2><p id="status" role="status">Nenhum dispositivo identificado.</p>
-<div class="grid"><button class="primary" id="usb">🔌 Conectar por USB</button><button id="bt">ᛒ Buscar Bluetooth LE</button></div>
+<div class="grid"><button class="primary" id="usb">🔌 Conectar por USB</button><button id="bt">Buscar Bluetooth LE</button></div>
 <p id="env"></p><small>A conexão só funciona se o rádio expuser informações compatíveis e o navegador permitir. USB de pen drive e Bluetooth clássico não garantem diagnóstico via web.</small>
 </section>
 <section>
@@ -35,11 +35,9 @@ button.primary{background:#087cab;border-color:#139bcf;font-weight:700}button:di
 <p>Confira o modelo e a região antes de procurar firmware. Dados USB (fabricante, produto, VID/PID) podem não revelar o modelo real.</p>
 <a href="https://pioneer.com.br/" target="_blank" rel="noopener noreferrer">Portal Pioneer Brasil</a>
 </section>
-<section>
-<h2>Manutenção avançada <span class="pill">Em estudo</span></h2>
-<div class="grid"><button disabled>Reset de fábrica</button><button disabled>Instalar firmware</button><button disabled>Busca de estações</button><button disabled>Pareamento Bluetooth</button><button disabled>Equalizador</button><button disabled>Backup de configurações</button></div>
-<p>Nenhuma dessas operações é executada nesta versão. Precisamos identificar o rádio e validar os procedimentos oficiais antes de ativá-las.</p>
-</section>
+<section><h2>Bluetooth Manager</h2><p id="btstate" role="status">Nenhum dispositivo BLE selecionado.</p><div class="grid"><button id="btcheck">Verificar disponibilidade Bluetooth</button><button id="btguide">Guia de pareamento e reconexão</button><button id="bttest">Checklist de música e chamadas</button></div><p id="bthelp"></p><small>Bluetooth clássico e exclusão de pareamentos do rádio não são acessíveis por esta interface web.</small></section>
+<section><h2>Diagnóstico integrado</h2><button id="diag">Verificar ambiente e conexão</button><p id="diagresult" role="status"></p><label for="symptom">Sintoma observado</label><input id="symptom" placeholder="Ex.: Bluetooth não conecta"><label for="firmware">Versão atual do firmware (se conhecida)</label><input id="firmware" placeholder="Informe a versão exibida no rádio"></section>
+<section><h2>Manutenção e configuração <span class="pill">Assistida</span></h2><div class="grid"><button data-module="reset">Smart Reset</button><button data-module="firmware">Firmware Manager</button><button data-module="radio">Radio Scan</button><button data-module="recovery">Recovery Mode</button><button data-module="setup">Smart Setup</button></div><p id="modulehelp" role="status">Selecione um módulo para consultar o próximo passo.</p><small>Operações automáticas de escrita permanecem bloqueadas até validação do modelo e protocolo. Nenhum comando de manutenção é enviado ao rádio.</small></section>
 <section>
 <h2>Relatório de descoberta</h2><pre id="log">Aguardando teste.</pre>
 <button id="save">Baixar relatório JSON</button><p><small>O relatório fica no dispositivo até você decidir exportá-lo. Revise o conteúdo antes de compartilhar.</small></p>
@@ -48,7 +46,7 @@ button.primary{background:#087cab;border-color:#139bcf;font-weight:700}button:di
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
-const report={version:'0.1.0',events:[]};
+const report={version:'1.0.0',events:[]};
 const err=e=>e instanceof Error?e.message:String(e);
 function log(type,data){report.events.push({time:new Date().toISOString(),type,data});$('log').textContent=JSON.stringify(report,null,2)}
 $('env').textContent=`HTTPS/seguro: ${isSecureContext?'sim':'não'} · WebUSB: ${navigator.usb?'sim':'não'} · Web Bluetooth: ${navigator.bluetooth?'sim':'não'}`;
@@ -67,7 +65,8 @@ $('bt').addEventListener('click',async()=>{
  try{
   if(!navigator.bluetooth)throw new Error('Web Bluetooth indisponível. Bluetooth clássico não é compatível com esta API.');
   const d=await navigator.bluetooth.requestDevice({acceptAllDevices:true});
-  log('ble_selected',{name:d.name||null,id:d.id||null});
+  log('ble_selected',{name:d.name||null});
+  $('btstate').textContent='BLE selecionado: '+(d.name||'sem nome')+' — conexão GATT não estabelecida.';
   $('status').textContent='Dispositivo BLE selecionado: '+(d.name||'sem nome');
   if(d.name&&!$('model').value)$('model').value=d.name;
  }catch(e){log('ble_error',err(e));$('status').textContent=err(e)}
@@ -78,9 +77,16 @@ $('search').addEventListener('click',()=>{
  window.open('https://www.google.com/search?q='+encodeURIComponent('site:pioneer.com.br '+m+' firmware atualização'),'_blank','noopener,noreferrer');
 });
 $('save').addEventListener('click',()=>{
- const blob=new Blob([JSON.stringify({...report,model:$('model').value.trim()},null,2)],{type:'application/json'});
+ const blob=new Blob([JSON.stringify({...report,model:$('model').value.trim(),firmware:$('firmware').value.trim(),symptom:$('symptom').value.trim()},null,2)],{type:'application/json'});
  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='autoradio-diagnostico.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
+$('btcheck').onclick=async()=>{try{const available=navigator.bluetooth&&navigator.bluetooth.getAvailability?await navigator.bluetooth.getAvailability():null;$('bthelp').textContent=available===null?'Disponibilidade não verificável neste navegador.':available?'Adaptador BLE disponível; isso não confirma conexão com o rádio.':'BLE indisponível no momento.';log('ble_availability',{available})}catch(e){$('bthelp').textContent=err(e);log('ble_error',err(e))}};
+$('btguide').onclick=()=>{$('bthelp').textContent='Com o carro estacionado, abra as configurações Bluetooth do Android, coloque o rádio no modo de pareamento conforme seu manual e selecione o rádio. Se falhar, confira se já está conectado a outro telefone. Não apague pareamentos sem confirmar o modelo.'};
+$('bttest').onclick=()=>{$('bthelp').textContent='Após parear pelo Android, reproduza uma música e confira a saída de mídia. Faça uma chamada de teste com o carro estacionado e verifique microfone e saída de chamada. Registre falhas no campo Sintoma observado.'};
+$('diag').onclick=async()=>{try{const devices=navigator.usb?await navigator.usb.getDevices():[];const data={secure:isSecureContext,webusb:!!navigator.usb,webbluetooth:!!navigator.bluetooth,authorizedUsb:devices.map(d=>({manufacturer:d.manufacturerName||null,product:d.productName||null,vendorId:d.vendorId,productId:d.productId}))};log('diagnostic',data);$('diagresult').textContent='Ambiente verificado. Dispositivos USB autorizados visíveis: '+devices.length+'. Não é um diagnóstico eletrônico do rádio.'}catch(e){log('diagnostic_error',err(e));$('diagresult').textContent=err(e)}};
+if(navigator.usb){for(const type of ['connect','disconnect'])navigator.usb.addEventListener(type,e=>log('usb_'+type,{vendorId:e.device.vendorId,productId:e.device.productId}))}
+const guides={reset:'Identifique o modelo exato e consulte o procedimento oficial de restauração. Reset automático bloqueado.',firmware:'Informe o modelo e a versão atual acima. Use Pesquisar atualização oficial. Nenhum firmware é instalado ou validado automaticamente.',radio:'Após identificar o modelo, consulte a função de sintonia automática no manual. A web ainda não controla o sintonizador.',recovery:'Se o rádio não iniciar normalmente, registre o sintoma e consulte o suporte oficial. Não tente instalar firmware de outro modelo.',setup:'Ordem sugerida: identificar modelo, registrar versão, verificar atualização oficial, confirmar procedimento de reset, configurar idioma e relógio, parear Bluetooth e sintonizar estações. Execute apenas os passos suportados pelo manual.'};
+document.querySelectorAll('[data-module]').forEach(b=>b.onclick=()=>{$('modulehelp').textContent=guides[b.dataset.module]});
 </script>
 </body>
 </html>
