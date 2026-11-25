@@ -2,7 +2,7 @@
 
 Central experimental de identificação e diagnóstico de rádios automotivos.
 
-## Alpha 0.1
+## V1.0
 
 Interface web responsiva com:
 - Seleção de dispositivos via **WebUSB**, quando suportada pelo dispositivo e navegador.
@@ -11,7 +11,7 @@ Interface web responsiva com:
 - Pesquisa manual de possíveis atualizações no site da Pioneer.
 - Relatório JSON exportável.
 
-**Importante:** conectar o cabo USB não garante que um rádio seja detectável ou controlável. Vários modelos usam a porta apenas para mídia/pendrive. Nenhuma função de reset, atualização de firmware, busca de estações ou pareamento automático está habilitada. Não existe instalação universal de drivers de rádio.
+**Importante:** conectar o cabo USB não garante que um rádio seja detectável ou controlável. Vários modelos usam a porta apenas para mídia/pendrive. Nenhuma função de reset, atualização de firmware, busca de estações ou pareamento automático está habilitada. Os módulos Smart Reset, Firmware Manager, Radio Scan, Recovery Mode e Smart Setup oferecem orientação textual. Bluetooth Manager verifica disponibilidade BLE e oferece checklists manuais; o diagnóstico integrado lista USB autorizado e registra eventos, sintomas e versão informada. Audio Lab e banco de compatibilidade não fazem parte da interface. V2 dependerá dos resultados do teste físico e dos protocolos suportados. Não existe instalação universal de drivers de rádio.
 
 ## Como abrir
 Acesse `index.html` em uma hospedagem **HTTPS**, como GitHub Pages. Para publicar: abra **Settings → Pages**, escolha **Deploy from a branch**, selecione `main` e `/(root)` e salve. A publicação poderá levar alguns minutos.
@@ -30,7 +30,7 @@ Preferencialmente use **Chrome no Android** com cabo USB de dados e adaptador OT
 6. Pesquise o firmware usando o modelo exato e procedimento oficial da região antes de qualquer atualização futura.
 
 ## Próximas etapas
-- Catalogar modelos Pioneer e procedimentos oficiais de identificação, atualização e reset.
+- Validar procedimentos oficiais para o modelo identificado no teste físico.
 - Adicionar guia assistido específico do modelo e relatório legível.
 - Testar suporte nativo Android USB Host quando as APIs web não forem suficientes.
 - Implementar comunicação ativa **somente** para protocolos documentados e aparelhos comprovadamente compatíveis, com consentimento explícito e etapas de recuperação.
